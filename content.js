@@ -1,10 +1,13 @@
 (() => {
-  // Only run on game pages (slug ends with -free-download)
-  if (!/-free-download\/?$/.test(location.pathname)) return;
   if (document.querySelector(".srs-box")) return;
 
   const h1 = document.querySelector("h1.entry-title, h1");
   if (!h1) return;
+
+  // Game pages have "free-download" in the slug (e.g. -free-download-1i) or "Free Download" in the title
+  const isGamePage =
+    /free-download/i.test(location.pathname) || /free download/i.test(h1.textContent);
+  if (!isGamePage) return;
 
   // ---------- Title cleanup ----------
   const cleanTitle = (t) =>
@@ -27,20 +30,46 @@
       .replace(/[^a-z0-9\s]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-  const tokens = (s) => new Set(norm(s).split(" ").filter(Boolean));
+  // Common abbreviations -> full names used on Steam
+  const ALIASES = {
+    gta: "grand theft auto",
+    cod: "call of duty",
+    rdr: "red dead redemption",
+    rdr2: "red dead redemption 2",
+    nfs: "need for speed",
+    mgs: "metal gear solid",
+    tes: "the elder scrolls",
+    lotr: "lord of the rings",
+    ac: "assassins creed",
+    re: "resident evil",
+    tlou: "the last of us",
+    bf: "battlefield",
+    mk: "mortal kombat",
+    sw: "star wars",
+  };
+  const expand = (s) =>
+    norm(s)
+      .split(" ")
+      .map((w) => ALIASES[w] || w)
+      .join(" ");
+  const tokens = (s) => new Set(expand(s).split(" ").filter(Boolean));
 
+  // Blend of Jaccard (strict) and coverage (how much of our title the Steam name contains)
   const score = (a, b) => {
     const A = tokens(a), B = tokens(b);
     if (!A.size || !B.size) return 0;
     let inter = 0;
     A.forEach((t) => B.has(t) && inter++);
-    return inter / (A.size + B.size - inter); // Jaccard
+    const jaccard = inter / (A.size + B.size - inter);
+    const coverage = inter / A.size;
+    return 0.5 * jaccard + 0.5 * coverage;
   };
 
   // Several query variants, from most to least specific
   const queries = [
     ...new Set([
       title,
+      expand(title),
       title.split(/[:\-–—]/)[0].trim(),
       title.replace(/\b(deluxe|ultimate|complete|definitive|gold|goty|remastered|collection|edition)\b/gi, "").replace(/\s+/g, " ").trim(),
       title.split(" ").slice(0, 3).join(" "),
