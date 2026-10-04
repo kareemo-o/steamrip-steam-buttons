@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "SteamRip → Steam Buttons",
+  "version": "1.0.0",
+  "description": "Adds Steam store, SteamDB, community and other quick-link buttons to game pages on steamrip.com.",
+  "permissions": [],
+  "host_permissions": ["https://store.steampowered.com/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://steamrip.com/*", "https://*.steamrip.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
